@@ -10,7 +10,10 @@ import { ConfigService } from '@nestjs/config';
 import { App, cert, getApps, initializeApp } from 'firebase-admin/app';
 import { type Auth, getAuth } from 'firebase-admin/auth';
 
-/** Caminho padrão do JSON da service account (Console do Firebase > Configurações > Contas de serviço). */
+/**
+ * Caminho padrão do JSON da service account (Console do Firebase > Configurações > Contas de serviço).
+ * Relativo à pasta do projeto: sem "/" no começo, senão vira /credentials na raiz do sistema.
+ */
 const DEFAULT_CREDENTIALS_PATH = 'credentials/firebase-service-account.json';
 
 /**
