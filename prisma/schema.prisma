@@ -1,0 +1,49 @@
+generator client {
+  provider            = "prisma-client"
+  output              = "../src/generated/prisma"
+  moduleFormat        = "cjs"
+  importFileExtension = ""
+}
+
+/// No Prisma 7 a URL do banco fica no prisma.config.ts, não aqui.
+datasource db {
+  provider = "postgresql"
+}
+
+/// Cada usuário é dono de uma barbearia (clientes, serviços, agenda e config próprios).
+model User {
+  id           String  @id @default(uuid()) @db.Uuid
+  name         String
+  email        String  @unique
+  /// Null quando a conta foi criada só pelo Google.
+  passwordHash String?
+  googleId     String? @unique
+  /// UID do Firebase Authentication (login pelo Firebase: Google, Apple, e-mail...).
+  firebaseUid  String? @unique
+
+  /// Segredo TOTP cifrado (AES-256-GCM). Existe a partir do /2fa/setup, mesmo antes de ativar.
+  twoFactorSecret   String?
+  twoFactorEnabled  Boolean @default(false)
+  /// Último time step TOTP aceito, para o mesmo código não ser usado duas vezes.
+  twoFactorLastStep Int?
+
+  recoveryCodes RecoveryCode[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("users")
+}
+
+model RecoveryCode {
+  id       String    @id @default(uuid()) @db.Uuid
+  userId   String    @db.Uuid
+  /// SHA-256 do código (os códigos são aleatórios e longos, não precisam de bcrypt).
+  codeHash String
+  usedAt   DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("recovery_codes")
+}
