@@ -2,6 +2,7 @@ import {
   BadRequestException,
   ConflictException,
   Injectable,
+  Logger,
   UnauthorizedException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
@@ -28,6 +29,9 @@ const INVALID_CHALLENGE = 'A verificação expirou. Entre novamente.';
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+  private readonly isDev = process.env.NODE_ENV === 'development';
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly jwt: JwtService,
@@ -102,11 +106,38 @@ export class AuthService {
   async loginWithFirebase(idToken: string) {
     const auth = this.firebase.auth; // 503 se o JSON da service account não estiver configurado
     // checkRevoked: conta desativada ou sessão revogada no Firebase não entra.
-    const token = await auth.verifyIdToken(idToken, true).catch(() => null);
+    // Engano comum: mandar o accessToken desta API (assinado por nós) no lugar do token do Firebase.
+    const ownToken = await this.jwt.verifyAsync(idToken).catch(() => null);
+    if (ownToken) {
+      throw new UnauthorizedException({
+        message: 'Sessão do Firebase inválida ou expirada. Entre novamente.',
+        error: 'Unauthorized',
+        statusCode: 401,
+        ...(this.isDev && {
+          detail:
+            'Este é o accessToken da própria API (de /auth/login, /auth/register ou /auth/firebase). ' +
+            'Em idToken vai o ID token do Firebase: rode `yarn firebase:token <email>` e use a última linha.',
+        }),
+      });
+    }
+
+    let reason = '';
+    const token = await auth
+      .verifyIdToken(idToken, true)
+      .catch((error: { code?: string; message?: string }) => {
+        // Ex.: "incorrect aud" = token do Google; "no kid" = accessToken da própria API.
+        reason = `${error.code ?? 'erro'} - ${error.message?.split(' See ')[0] ?? ''}`;
+        this.logger.warn(`Token do Firebase recusado: ${reason}`);
+        return null;
+      });
     if (!token) {
-      throw new UnauthorizedException(
-        'Sessão do Firebase inválida ou expirada. Entre novamente.',
-      );
+      throw new UnauthorizedException({
+        message: 'Sessão do Firebase inválida ou expirada. Entre novamente.',
+        error: 'Unauthorized',
+        statusCode: 401,
+        // Só em desenvolvimento: o motivo real, para depurar pelo Swagger.
+        ...(this.isDev && { detail: reason }),
+      });
     }
 
     let user = await this.prisma.user.findUnique({
