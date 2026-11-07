@@ -1,0 +1,10 @@
+node_modules
+dist
+src/generated
+.env
+.git
+coverage
+*.log
+postgres_data
+credentials
+*-firebase-adminsdk-*.json
