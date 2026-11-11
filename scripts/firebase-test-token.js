@@ -16,7 +16,8 @@ const { cert, initializeApp } = require('firebase-admin/app');
 const { getAuth } = require('firebase-admin/auth');
 
 async function main() {
-  const [email = 'teste@barbearia.dev', name = 'Usuário de Teste'] = process.argv.slice(2);
+  const [email = 'teste@gmail.com', name = 'Barbeira de Teste'] =
+    process.argv.slice(2);
 
   const apiKey = process.env.FIREBASE_WEB_API_KEY;
   if (!apiKey) {
@@ -28,7 +29,8 @@ async function main() {
   }
 
   const path = resolve(
-    process.env.FIREBASE_SERVICE_ACCOUNT_PATH || 'credentials/firebase-service-account.json',
+    process.env.FIREBASE_SERVICE_ACCOUNT_PATH ||
+      'credentials/firebase-service-account.json',
   );
   const sa = JSON.parse(readFileSync(path, 'utf8'));
   const auth = getAuth(
@@ -44,7 +46,9 @@ async function main() {
 
   const user = await auth
     .getUserByEmail(email)
-    .then((u) => auth.updateUser(u.uid, { emailVerified: true, displayName: name }))
+    .then((u) =>
+      auth.updateUser(u.uid, { emailVerified: true, displayName: name }),
+    )
     .catch((error) => {
       if (error.code !== 'auth/user-not-found') throw error;
       return auth.createUser({ email, emailVerified: true, displayName: name });
@@ -62,12 +66,19 @@ async function main() {
   );
   const body = await response.json();
   if (!response.ok) {
-    console.error('O Firebase recusou a troca do token:', body.error?.message ?? body);
+    console.error(
+      'O Firebase recusou a troca do token:',
+      body.error?.message ?? body,
+    );
     process.exit(1);
   }
 
-  console.error(`Usuário: ${email} (uid ${user.uid}). Token válido por 1 hora.`);
-  console.error('Use no Swagger em POST /api/auth/firebase: { "idToken": "<token abaixo>" }\n');
+  console.error(
+    `Usuário: ${email} (uid ${user.uid}). Token válido por 1 hora.`,
+  );
+  console.error(
+    'Use no Swagger em POST /api/auth/firebase: { "idToken": "<token abaixo>" }\n',
+  );
   console.log(body.idToken);
 }
 

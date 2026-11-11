@@ -8,7 +8,11 @@ async function bootstrap() {
 
   // O app usa EXPO_PUBLIC_API_URL terminando em /api.
   app.setGlobalPrefix('api');
-  app.enableCors();
+  app.enableCors({
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    requiredHeaders: ['Content-Type', 'Authorization'],
+    origin: '*',
+  });
   app.enableShutdownHooks();
   app.useGlobalPipes(
     // whitelist descarta campos desconhecidos em vez de recusar a requisição.
