@@ -9,6 +9,7 @@ import { JwtService } from '@nestjs/jwt';
 import { compare, hash } from 'bcryptjs';
 import { Prisma, type User } from '../../generated/prisma/client';
 import { FirebaseService } from '../../shared/firebase/firebase.service';
+import { barbeariaInicial } from '../barbearia/defaults';
 import { PrismaService } from '../../shared/prisma/prisma.service';
 import type { LoginDto } from './dto/login.dto';
 import type { RegisterDto } from './dto/register.dto';
@@ -47,6 +48,7 @@ export class AuthService {
           name,
           email,
           passwordHash: await hash(password, BCRYPT_ROUNDS),
+          ...barbeariaInicial(),
         },
       });
       return this.authenticated(user);
@@ -92,6 +94,7 @@ export class AuthService {
           name: profile.name,
           email: profile.email,
           googleId: profile.googleId,
+          ...barbeariaInicial(),
         },
       });
     }
@@ -159,7 +162,12 @@ export class AuthService {
       user = await this.prisma.user.upsert({
         where: { email },
         update: { firebaseUid: token.uid },
-        create: { name, email, firebaseUid: token.uid },
+        create: {
+          name,
+          email,
+          firebaseUid: token.uid,
+          ...barbeariaInicial(),
+        },
       });
     }
     return this.loginResult(user);
