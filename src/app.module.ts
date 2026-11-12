@@ -3,6 +3,7 @@ import { ConfigModule } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { AuthModule } from './modules/auth/auth.module';
+import { BarbeariaModule } from './modules/barbearia/barbearia.module';
 import { HealthController } from './modules/health/health.controller';
 import { FirebaseModule } from './shared/firebase/firebase.module';
 import { PrismaModule } from './shared/prisma/prisma.module';
@@ -18,6 +19,7 @@ import { PrismaModule } from './shared/prisma/prisma.module';
     PrismaModule,
     FirebaseModule,
     AuthModule,
+    BarbeariaModule,
   ],
   controllers: [HealthController],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
