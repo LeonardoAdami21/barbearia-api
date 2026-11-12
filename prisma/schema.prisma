@@ -29,10 +29,115 @@ model User {
 
   recoveryCodes RecoveryCode[]
 
+  config       Config?
+  servicos     Servico[]
+  clientes     Cliente[]
+  agendamentos Agendamento[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@map("users")
+}
+
+/// Ajustes da barbearia (um por usuário). Os valores padrão ficam em src/modules/barbearia/defaults.ts.
+model Config {
+  userId         String @id @db.Uuid
+  nomeBarbearia  String
+  /// HH:MM
+  abertura       String @db.VarChar(5)
+  /// HH:MM
+  fechamento     String @db.VarChar(5)
+  intervaloMin   Int
+  /// A partir de quantas faltas o cliente recebe alerta.
+  limiteFaltas   Int
+  msgConfirmacao String
+  msgLembrete    String
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  updatedAt DateTime @updatedAt
+
+  @@map("configs")
+}
+
+model Servico {
+  id         String  @id @default(uuid()) @db.Uuid
+  userId     String  @db.Uuid
+  nome       String
+  duracaoMin Int
+  preco      Decimal @db.Decimal(10, 2)
+  /// Remover um serviço só o esconde dos novos agendamentos; o histórico continua apontando para ele.
+  ativo      Boolean @default(true)
+
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  agendamentos Agendamento[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId, ativo])
+  @@map("servicos")
+}
+
+model Cliente {
+  id                  String  @id @default(uuid()) @db.Uuid
+  userId              String  @db.Uuid
+  nome                String
+  /// Só dígitos, como foi digitado (ex.: 27999990001).
+  telefone            String
+  /// Com DDI 55: usado para não repetir o mesmo número com ou sem o 55.
+  telefoneNormalizado String
+  obs                 String?
+
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  agendamentos Agendamento[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, telefoneNormalizado])
+  @@index([userId, nome])
+  @@map("clientes")
+}
+
+enum StatusAgendamento {
+  agendado
+  confirmado
+  concluido
+  faltou
+  cancelado
+}
+
+model Agendamento {
+  id         String            @id @default(uuid()) @db.Uuid
+  userId     String            @db.Uuid
+  clienteId  String            @db.Uuid
+  servicoId  String            @db.Uuid
+  /// YYYY-MM-DD (data local da barbearia)
+  data       String            @db.VarChar(10)
+  /// HH:MM
+  hora       String            @db.VarChar(5)
+  /// Duração e preço do serviço no momento do agendamento (mudar o serviço depois não altera a agenda).
+  duracaoMin Int
+  preco      Decimal           @db.Decimal(10, 2)
+  status     StatusAgendamento @default(agendado)
+  obs        String?
+
+  confirmacaoEnviada Boolean @default(false)
+  lembreteEnviado    Boolean @default(false)
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// Apagar o cliente apaga o histórico dele, como no app.
+  cliente Cliente @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+  servico Servico @relation(fields: [servicoId], references: [id], onDelete: Restrict)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId, data])
+  @@index([clienteId])
+  @@map("agendamentos")
 }
 
 model RecoveryCode {
